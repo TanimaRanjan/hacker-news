@@ -3,6 +3,9 @@ import "./App.css";
 import Search from "./Search";
 import Table from "./Table";
 import Button from "./Button";
+import Loading from './Loading'
+import withLoading from './withLoading'
+
 
 const DEFAULT_QUERY = "redux";
 const DEFAULT_HPP = "100";
@@ -12,6 +15,11 @@ const PARAM_SEARCH = "query=";
 const PARAM_PAGE = "page=";
 const PARAM_HPP = "hitsPerPage=";
 
+
+
+const ButtonWithLoading = withLoading(Button)
+
+
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -19,7 +27,8 @@ class App extends React.Component {
       results: null,
       searchKey: "",
       searchTerm: DEFAULT_QUERY,
-      error: null
+      error: null,
+      isLoading:false
     };
   }
 
@@ -38,13 +47,17 @@ class App extends React.Component {
   };
 
   fetchTopStories = (searchTerm, page = 0) => {
+    this.setState({
+      isLoading:true
+    })
     fetch(
-      `${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`
+      `${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}`
     )
       .then(response => response.json())
       .then(result => this.onSearchTopStories(result))
       .catch(error => error);
   };
+
 
   onSearchTopStories = result => {
     const { hits, page } = result;
@@ -52,16 +65,20 @@ class App extends React.Component {
 
     // Get all the hits from before
     // append more results to this when more is pressed
-    const oldHits = results && result[searchKey] ? results[searchKey].hits : [];
+    const oldHits = results && results[searchKey] 
+    ? results[searchKey].hits 
+    : [];
 
     const updatedHits = [...oldHits, ...hits];
     this.setState({
       results: {
         ...results,
         [searchKey]: { hits: updatedHits, page }
-      }
+      }, 
+      isLoading:false
     });
   };
+
 
   onDismiss = id => {
     //  const isNotID = item = item.objectID !== id
@@ -76,10 +93,12 @@ class App extends React.Component {
     });
   };
 
+
   onIsSearchNeeded = searchTerm => {
     return !this.state.results[searchTerm];
   };
-  
+
+
   onSearchSubmit = event => {
     event.preventDefault();
     const { searchTerm } = this.state;
@@ -93,7 +112,13 @@ class App extends React.Component {
   };
 
   render() {
-    const { searchTerm, results, searchKey, error } = this.state;
+    const { 
+      searchTerm, 
+      results, 
+      searchKey, 
+      error,
+      isLoading } = this.state;
+
 
     const page =
       (results && results[searchKey] && results[searchKey].page) || 0;
@@ -101,7 +126,11 @@ class App extends React.Component {
     const result =
       (results && results[searchKey] && results[searchKey].hits) || [];
 
+      if(results) console.log('results ',results) 
+    if(result) console.log('result ',result)
+
     return (
+
       <div className="page">
         <div className="iteractions">
           <Search
@@ -113,7 +142,10 @@ class App extends React.Component {
           </Search>
 
           {error ? (
-            <div className="interactions">Something went wrong</div>
+            <div 
+              className="interactions">
+              Something went wrong
+            </div>
           ) : (
             <Table
               list={result}
@@ -123,13 +155,12 @@ class App extends React.Component {
           )}
 
           <div className="interactions">
-            <Button
-              onClick={() => {
-                this.fetchTopStories(result, page + 1);
-              }}
-            >
+          <ButtonWithLoading 
+              isLoading={isLoading}
+              onClick={() => {this.fetchTopStories(result, page + 1)}}>
               More
-            </Button>
+            </ButtonWithLoading>
+          
           </div>
         </div>
       </div>
